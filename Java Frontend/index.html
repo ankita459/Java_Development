@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Customer Management</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .container {
+            margin-top: 50px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="loginId">Login ID</label>
+                <input type="text" class="form-control" id="loginId" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" class="form-control" id="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+
+        <h1>Customer List</h1>
+        <table id="customerTable" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Street</th>
+                    <th>Address</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h1>Add New Customer</h1>
+        <form id="addCustomerForm">
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="firstName">First Name</label>
+                    <input type="text" class="form-control" id="firstName" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" class="form-control" id="lastName" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="street">Street</label>
+                    <input type="text" class="form-control" id="street" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="address">Address</label>
+                    <input type="text" class="form-control" id="address" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="city">City</label>
+                    <input type="text" class="form-control" id="city" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="state">State</label>
+                    <input type="text" class="form-control" id="state" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="email">Email</label>
+                    <input type="email" class="form-control" id="email" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="phone">Phone</label>
+                    <input type="text" class="form-control" id="phone" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Customer</button>
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            let bearerToken = '';
+
+            // Login form submission
+            $('#loginForm').submit(function (event) {
+                event.preventDefault();
+                const loginId = $('#loginId').val();
+                const password = $('#password').val();
+
+                $.ajax({
+                    url: 'https://qa2.sunbasedata.com/sunbase/portal/api/assignment_auth.jsp',
+                    method: 'POST',
+                    data: JSON.stringify({login_id: loginId, password: password}),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        bearerToken = response.token;
+                        loadCustomerList();
+                    },
+                    error: function (error) {
+                        console.error('Login failed:', error);
+                    }
+                });
+            });
+
+            // Load customer list
+            function loadCustomerList() {
+                $.ajax({
+                    url: 'https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=create',
+                    method: 'GET',
+                    headers: {'Authorization': 'Bearer ' + bearerToken},
+                    success: function (response) {
+                        displayCustomerList(response);
+                    },
+                    error: function (error) {
+                        console.error('Failed to load customer list:', error);
+                    }
+                });
+            }
+
+            // Display customer list
+            function displayCustomerList(customers) {
+                const tableBody = $('#customerTable tbody');
+                tableBody.empty();
+
+                customers.forEach(function (customer) {
+                    const row = $('<tr>');
+                    row.append($('<td>').text(customer.first_name));
+                    row.append($('<td>').text(customer.last_name));
+                    row.append($('<td>').text(customer.street));
+                    row.append($('<td>').text(customer.address));
+                    row.append($('<td>').text(customer.city));
+                    row.append($('<td>').text(customer.state));
+                    row.append($('<td>').text(customer.email));
+                    row.append($('<td>').text(customer.phone));
+
+                    const actions = $('<td>');
+                    const deleteButton = $('<button>').text('Delete').addClass('btn btn-danger btn-sm');
+                    deleteButton.click(function () {
+                        deleteCustomer(customer.uuid);
+                    });
+                    actions.append(deleteButton);
+
+                    const updateButton = $('<button>').text('Update').addClass('btn btn-primary btn-sm');
+                    updateButton.click(function () {
+                        // Populate update form with customer details
+                        $('#firstName').val(customer.first_name);
+                        $('#lastName').val(customer.last_name);
+                        $('#street').val(customer.street);
+                        $('#address').val(customer.address);
+                        $('#city').val(customer.city);
+                        $('#state').val(customer.state);
+                        $('#email').val(customer.email);
+                        $('#phone').val(customer.phone);
+                    });
+                    actions.append(updateButton);
+
+                    row.append(actions);
+                    tableBody.append(row);
+                });
+            }
+
+            // Add new customer form submission
+            $('#addCustomerForm').submit(function (event) {
+                event.preventDefault();
+                const firstName = $('#firstName').val();
+                const lastName = $('#lastName').val();
+                const street = $('#street').val();
+                const address = $('#address').val();
+                const city = $('#city').val();
+                const state = $('#state').val();
+                const email = $('#email').val();
+                const phone = $('#phone').val();
+                // Get other customer fields here
+
+                const newCustomer = {
+                    first_name: firstName,
+                    last_name: lastName,
+                    street: street,
+                    address: address,
+                    city: city,
+                    state: state,
+                    email: email,
+                    phone: phone,
+                    // Add other customer fields here
+                };
+
+                $.ajax({
+                    url: 'https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=get_customer_list',
+                    method: 'POST',
+                    headers: {'Authorization': 'Bearer ' + bearerToken},
+                    data: JSON.stringify(newCustomer),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        console.log('Customer created successfully:', response);
+                        loadCustomerList();
+                    },
+                    error: function (error) {
+                        console.error('Failed to create customer:', error);
+                    }
+                });
+            });
+
+            // Delete a customer
+            function deleteCustomer(uuid) {
+                $.ajax({
+                    url: 'https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=delete&uuid=SPECIFIC_CUSTOMER_UUID' + uuid,
+                    method: 'POST',
+                    headers: {'Authorization': 'Bearer ' + bearerToken},
+                    success: function (response) {
+                        console.log('Customer deleted successfully:', response);
+                        loadCustomerList();
+                    },
+                    error: function (error) {
+                        console.error('Failed to delete customer:', error);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
